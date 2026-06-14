@@ -16,3 +16,12 @@ class GeoDownloadError(GeoExpressionError):
 
 class MappingError(GeoExpressionError):
     """Raised when probe-to-gene mapping fails irrecoverably."""
+
+
+class CachedNegativeEntryError(GeoExpressionError):
+    """Raised when a negative cache sentinel blocks repeat upstream work."""
+
+    def __init__(self, layer: str, key: str, message: str) -> None:
+        self.layer = layer
+        self.key = key
+        super().__init__(message)

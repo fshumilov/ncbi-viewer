@@ -23,7 +23,7 @@ Implement items in **Order** (summary table). Within a slice group, complete tas
 | --- | --- | --- | --- | --- | --- |
 | 1 | F-01 | BL-01 | done | Project scaffold, config, logging, validation, health route | — |
 | 2 | F-02 | BL-02 | done | Cold-path expression: GeoClient, mapper, plotter, `GET /expression` | BL-01 |
-| 3 | F-03 | BL-03 | not started | Two-tier CacheStore + expression cache seam (`cached`, `duration_ms`) | BL-02 |
+| 3 | F-03 | BL-03 | done | Two-tier CacheStore + expression cache seam (`cached`, `duration_ms`) | BL-02 |
 | 4 | F-04 | BL-05 | not started | ChatAgent, ExpressionTool, `POST /chat` (stub LLM OK) | BL-02, BL-03 |
 | 5 | F-05 | BL-04 | not started | GeoClient retries, timeouts, bounded concurrency, HTTP error mapping | BL-02, BL-05 |
 | 6 | F-06 | BL-06 | not started | README runbook, `.env.example`, acceptance cross-links | BL-03, BL-04, BL-05 |
@@ -88,13 +88,13 @@ Implement items in **Order** (summary table). Within a slice group, complete tas
 - **Slice:** F-03
 - **Screens / routes:** `route.expression` (warm cache behavior)
 - **Tasks:**
-  - [ ] Implement `adapters/cache_store.py`: in-memory LRU fronting disk under `GEO_CACHE_DIR`; keys `raw:{url_hash}`, `map:{gpl_id}`, `result:{gse_id}:{genes_hash}`; gene list sorted + uppercase for hash
-  - [ ] Add negative caching sentinel for failed GPL parse/fetch
-  - [ ] Implement eviction: LRU + max entries/bytes (`GEO_CACHE_MAX_ENTRIES`, `GEO_CACHE_MAX_BYTES` or architecture equivalents)
-  - [ ] Disk entries include `schema_version: 1`; delete-on-read mismatch
-  - [ ] Integrate `CacheStore` into `ExpressionService`: lookup/store all layers; promote memory←disk on hit
-  - [ ] Expose `cached: true/false` and measurable `duration_ms` on `ExpressionResult`
-  - [ ] Log cache hit/miss with `request_id`
+  - [x] Implement `adapters/cache_store.py`: in-memory LRU fronting disk under `GEO_CACHE_DIR`; keys `raw:{url_hash}`, `map:{gpl_id}`, `result:{gse_id}:{genes_hash}`; gene list sorted + uppercase for hash
+  - [x] Add negative caching sentinel for failed GPL parse/fetch
+  - [x] Implement eviction: LRU + max entries/bytes (`GEO_CACHE_MAX_ENTRIES`, `GEO_CACHE_MAX_BYTES` or architecture equivalents)
+  - [x] Disk entries include `schema_version: 1`; delete-on-read mismatch
+  - [x] Integrate `CacheStore` into `ExpressionService`: lookup/store all layers; promote memory←disk on hit
+  - [x] Expose `cached: true/false` and measurable `duration_ms` on `ExpressionResult`
+  - [x] Log cache hit/miss with `request_id`
 - **Done when:**
   - First `(gse, genes)` request shows `cached: false`; identical second request shows `cached: true` and measurably lower `duration_ms` (solution draft — cache cold/warm)
   - After process restart, repeat request hits disk tier without full raw GEO re-download (restart survival)
