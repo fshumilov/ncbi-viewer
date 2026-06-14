@@ -2,34 +2,36 @@
 
 ## General idea
 
-**GEO Expression Service** is a small Python service for exploring gene expression from [NCBI GEO](https://www.ncbi.nlm.nih.gov/geo/). A researcher names a GEO series (GSE) and a few gene symbols (e.g. TP53, BRCA1); the system downloads the expression matrix, maps platform probe IDs to gene symbols via GPL annotation, aggregates probe-level values per gene, and returns boxplots across samples. A pydantic-ai chatbot wraps the same logic so users can ask in natural language (*"Show me TP53 and BRCA1 expression in GSE2034"*) and receive a plot plus a grounded text answer — not a hallucinated reply. The product must handle real-world annotation mess (multi-gene cells, varying column names, missing values) and make repeat queries near-instant through bounded caching.
+**GEO Expression Service** is a small Python service for exploring gene expression from [NCBI GEO](https://www.ncbi.nlm.nih.gov/geo/). GEO organizes data as **GSE** (study/series), **GSM** (samples), and **GPL** (measurement platform). Expression matrices are indexed by probe IDs (e.g. `1007_s_at`), not gene symbols — so answering *"what is TP53 expression?"* requires downloading GPL annotation and mapping probes → symbols, then aggregating multiple probes per gene.
+
+The product has two parts: a **FastAPI backend** that, given a GSE and 2–5 gene symbols, returns boxplots of each gene's expression across samples; and a **pydantic-ai chatbot** with at least one tool that calls that logic so users can ask in natural language (*"Show me TP53 and BRCA1 expression in GSE2034"*) and receive a plot plus a grounded text answer — not a hallucinated reply. Two engineering problems dominate: **robust gene mapping** on messy real annotations, and **bounded caching** so repeat requests for the same series/platform/genes are near-instant while first requests may be slow. Built as an assessment deliverable (repo shared in advance); graded on mapping correctness, measurable cache speedup, real tool invocation, and clean async architecture.
 
 | Stakeholder | Type | Top goal | Top pain |
 | --- | --- | --- | --- |
-| Bioinformatics researcher | Primary user | Get accurate per-gene expression plots for a GSE without manual probe mapping or GEO file wrangling | Expression matrices use probe IDs, not gene symbols; platform annotations are inconsistent; first GEO download is slow |
-| Technical assessor / reviewer | Decision-maker | Verify defensible gene mapping, measurable cache speedup, real tool-calling, and clean async architecture | Candidates that skip data fetch or hide mapping failures; unbounded in-memory caches; blocking network I/O |
-| Service developer (candidate) | Implementer | Ship a working FastAPI + pydantic-ai solution that survives messy GEO data and defends design trade-offs in discussion | One gene maps to many probes; annotation column names vary; large slow downloads; optional LLM API key |
+| Bioinformatics researcher | Primary user | Get accurate per-gene expression boxplots for a chosen GSE without manual probe mapping or GEO file wrangling | Matrices keyed by probe IDs; inconsistent GPL annotations; long first download; repeat queries still slow without caching |
+| Technical assessor / reviewer | Decision-maker | Verify defensible mapping, measurable cache speedup on repeat calls, real tool-calling, async layering, and a README that explains trade-offs | Plausible chat answers with no data fetch; silent loss of unmapped probes; unbounded caches; blocking `requests`; bare exception handling |
+| Service developer (candidate) | Implementer | Ship FastAPI + pydantic-ai with `POST /chat` and direct expression access (e.g. `GET /expression`), async GEO I/O, and defensible design under discussion | One gene → many probes; multi-gene annotation cells; varying column names; large slow downloads; choosing cache layers and eviction under time pressure |
 
 ## Bioinformatics researcher
 
 - **Type:** Primary user
-- **Goals:** Ask for 2–5 genes in a chosen GSE and receive usable boxplots plus a concise interpretation; trust that values reflect real GEO data, not model invention; see when probe mapping is partial (how many probes mapped per gene).
-- **Pains:** Cannot answer "what is TP53 expression?" directly from a matrix keyed by probes like `1007_s_at`; must find GPL annotation, parse inconsistent files, and decide how to aggregate multiple probes per gene; waiting minutes on every repeat query for the same series/platform; uncertainty when annotations contain multi-gene strings (`TP53 /// WRAP53`) or missing/`---` values.
+- **Goals:** Name a GSE and 2–5 gene symbols and receive usable boxplots (PNG/base64 or renderable JSON) plus a short interpretation; trust that values come from fetched GEO data, not model invention; see mapping transparency (e.g. how many probes mapped per gene, not silent total drop).
+- **Pains:** Cannot query gene symbols directly against probe-keyed matrices; must locate GPL annotation, parse files with varying columns (`Gene Symbol`, `GENE_SYMBOL`, `SYMBOL`, …) and messy values (multi-gene `TP53 /// WRAP53`, missing/`---`/null); must choose probe aggregation (e.g. mean of log2 values); first GEO/platform download can take minutes; **repeat requests for the same series/genes should not wait again** — unbounded or absent caching wastes time on every visit.
 
 ## Technical assessor / reviewer
 
 - **Type:** Decision-maker (grading / assessment scope)
-- **Goals:** Confirm probe→symbol mapping is correct and justified (aggregation, multi-gene cells, missing data); observe a measurable speedup on the second identical request with a bounded eviction policy; see the chatbot invoke a tool and ground its answer in fetched results; review separation of API, service, and external-client layers with specific exception handling.
-- **Pains:** Chat replies that look plausible but never called a tool or downloaded GEO data; silent drop of unmapped probes with no surfaced counts; caches that grow without eviction; repeat calls as slow as the first; bare `except` blocks and tangled download/mapping logic in route handlers.
+- **Goals:** Confirm probe→symbol mapping is correct and justified (aggregation, multi-gene cells, missing data, surfaced unmapped counts); observe **measurable** speedup on an identical second request with a **bounded** eviction policy (e.g. timing logs or `cached: true/false`); verify chatbot **actually invokes a tool** and grounds its answer in fetched results (stub LLM OK if wiring is real); review API ↔ service ↔ external-client separation, specific exception handling, async network I/O (`httpx.AsyncClient`); optional credit for tests (mapping unit test, cache faster-on-second-call test), bounded concurrency, two-tier cache, resilience patterns — per README and code quality.
+- **Pains:** Chat replies that score zero because no tool ran and no GEO data was fetched; caches that grow forever with no eviction; second call as slow as the first; mapping logic tangled in route handlers; README that only lists run commands without explaining mapping and cache trade-offs.
 
 ## Service developer (candidate)
 
 - **Type:** Implementer
-- **Goals:** Deliver minimum viable endpoints (`POST /chat`, direct expression access e.g. `GET /expression`); implement async I/O for all GEO/network work; document how gene-mapping and caching problems were solved and which trade-offs were chosen; optionally stub the LLM while keeping real tool invocation wiring.
-- **Pains:** Real GPL annotation files use unpredictable column names (`Gene Symbol`, `GENE_SYMBOL`, `SYMBOL`, …); engineering two hard problems under time pressure — robust mapping and layered bounded cache (raw file vs parsed map vs per-gene result); choosing cache granularity and eviction without over-engineering; proving cache benefit via timing logs or `cached: true/false` flags.
+- **Goals:** Deliver Python 3.11+ stack with FastAPI and pydantic-ai; implement async I/O for all GEO/network work; expose at least two endpoints (`POST /chat`, direct expression e.g. `GET /expression?gse=...&genes=TP53,BRCA1`); return boxplots in a usable form; add bounded caching at sensible layers (raw file, parsed probe→symbol map, per-gene result — including negative cache); document in README how the two core problems were solved and which trade-offs were chosen; share repo link before assessment day.
+- **Pains:** Real GPL files are unpredictable; engineering robust mapping and layered bounded cache simultaneously; deciding what to cache and eviction without over-engineering; proving cache benefit via logs or response flags; optional LLM API key may require stub model while keeping real tool-calling path; time pressure to defend concurrency, retries, and architecture choices in design discussion.
 
 ## Open questions
 
-- Is the primary researcher persona an academic bench scientist, a bioinformatics core-facility analyst, or a mixed audience? (Spec assumes GEO-literate users who know GSE IDs and gene symbols.)
+- Is the primary researcher persona an academic bench scientist, a bioinformatics core-facility analyst, or a mixed GEO-literate audience?
 - Will anyone consume the direct REST endpoint only (no chat), e.g. a future frontend or notebook integration?
-- Are there compliance constraints (PII, institutional data policies) beyond using public NCBI GEO data?
+- Are there compliance constraints beyond public NCBI GEO data (institutional policies, export controls)?
