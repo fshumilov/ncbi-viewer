@@ -352,7 +352,7 @@ stateDiagram-v2
 
 | Topic | Decision |
 | --- | --- |
-| Repo layout | Monorepo — `geo_expression_service/` alongside `ncbi-viewer/` |
+| Repo layout | Single repo — `pyproject.toml` + package `geo_expression_service/` at repository root |
 | Tabular parsing | stdlib `csv` only (no pandas) |
 | F-05 resilience | In assessment MVP |
 | Build order after cache | F-04 chat before F-05 resilience |
