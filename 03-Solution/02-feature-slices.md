@@ -111,7 +111,7 @@ F-05 (resilience) and F-06 run after the spine; **F-05 is in assessment MVP** �
 - Default probe aggregation is **mean of log2 expression values** (documented in F-06 README).
 - Cache keys normalize gene list order and symbol casing (e.g. uppercase).
 - Matrix/annotation parsing uses **stdlib `csv` only** (no pandas) — confirmed 2025-06-14.
-- **Monorepo:** `geo_expression_service/` at workspace root alongside `ncbi-viewer/` — confirmed 2025-06-14.
+- **Repo layout:** `pyproject.toml` + package `geo_expression_service/` at repository root — confirmed 2025-06-14.
 - F-05 is **in assessment MVP** (retries, semaphore) — implement after F-04 per backlog order.
 - No web UI (`04-UI/` deferred per solution non-goals).
 - Tests (mapping unit test, cache speedup test) are recommended stretch items, not separate slices.

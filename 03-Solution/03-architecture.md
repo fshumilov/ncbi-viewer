@@ -56,38 +56,43 @@ Build-time contract for implementers; expands solution draft Part B (`03-Solutio
 
 ## Repository and module layout
 
-**Decision (2025-06-14):** Monorepo — implementation code root is **`geo_expression_service/`** at the workspace root (`../geo_expression_service/` relative to this doc tree in `ncbi-viewer/`). Documentation stays in `ncbi-viewer/` in the **same git repository** as the assessor deliverable.
+**Decision (2025-06-14, updated 2025-06-14):** Single git repository — Python package **`geo_expression_service/`** and **`pyproject.toml`** at repository root (sibling to `01-Context/`, `03-Solution/`, `docs/`). Runbook: `docs/run_book.md`. Agent diagrams: `.local/diagrams/`.
 
 ```
-geo_expression_service/
+ncbi-viewer/                    # git repository root
 ├── pyproject.toml              # dependencies, entry point
-├── README.md                   # runbook (F-06)
-├── .env.example                # optional env template
+├── README.md
+├── .local/diagrams/            # Mermaid diagrams (agent)
+├── docs/
+│   └── run_book.md
+├── 01-Context/
+├── 03-Solution/
+├── geo_expression_service/     # Python package (import path geo_expression_service.*)
+│   ├── __init__.py
+│   ├── main.py                 # FastAPI app factory, lifespan (httpx client, cache init)
+│   ├── config.py               # Settings (pydantic-settings)
+│   ├── logging.py              # request_id middleware, log format
+│   ├── exceptions.py           # domain exception hierarchy
+│   ├── api/
+│   │   ├── routes/
+│   │   │   ├── health.py       # GET /health
+│   │   │   ├── expression.py   # GET /expression
+│   │   │   └── chat.py         # POST /chat
+│   │   └── dependencies.py     # DI: ExpressionService, ChatAgent
+│   ├── services/
+│   │   ├── expression_service.py   # orchestration
+│   │   └── chat_agent.py           # pydantic-ai agent + ExpressionTool
+│   ├── domain/
+│   │   ├── models.py           # ExpressionRequest, ExpressionResult, MappingSummary, …
+│   │   ├── validation.py       # GSE format, 2–5 genes (F-01)
+│   │   ├── annotation_mapper.py
+│   │   └── plot_builder.py
+│   └── adapters/
+│       ├── geo_client.py       # NCBI FTP/HTTP async downloads
+│       └── cache_store.py      # two-tier CacheStore
+├── .env.example                # optional env template (F-06)
 ├── Dockerfile                  # optional
-├── tests/                      # stretch — mapping, cache speedup
-└── geo_expression_service/
-    ├── __init__.py
-    ├── main.py                 # FastAPI app factory, lifespan (httpx client, cache init)
-    ├── config.py               # Settings (pydantic-settings)
-    ├── logging.py              # request_id middleware, log format
-    ├── exceptions.py           # domain exception hierarchy
-    ├── api/
-    │   ├── routes/
-    │   │   ├── health.py       # GET /health
-    │   │   ├── expression.py   # GET /expression
-    │   │   └── chat.py         # POST /chat
-    │   └── dependencies.py     # DI: ExpressionService, ChatAgent
-    ├── services/
-    │   ├── expression_service.py   # orchestration
-    │   └── chat_agent.py           # pydantic-ai agent + ExpressionTool
-    ├── domain/
-    │   ├── models.py           # ExpressionRequest, ExpressionResult, MappingSummary, …
-    │   ├── validation.py       # GSE format, 2–5 genes (F-01)
-    │   ├── annotation_mapper.py
-    │   └── plot_builder.py
-    └── adapters/
-        ├── geo_client.py       # NCBI FTP/HTTP async downloads
-        └── cache_store.py      # two-tier CacheStore
+└── tests/                      # stretch — mapping, cache speedup
 ```
 
 **Naming conventions**
@@ -416,7 +421,7 @@ sequenceDiagram
 
 ## Assumptions
 
-1. Code root directory is `geo_expression_service/` at monorepo workspace root, sibling to `ncbi-viewer/` documentation — **confirmed 2025-06-14**.
+1. Python package is `geo_expression_service/` at repository root; `pyproject.toml` at repo root — **confirmed 2025-06-14**.
 2. Default probe aggregation is **mean of log2 expression values** across mapped probes per sample.
 3. Cache keys normalize gene list order (sorted) and symbol casing (uppercase).
 4. Matrix and annotation parsing use **stdlib `csv` only** (no pandas) — **confirmed 2025-06-14**; document trade-offs in F-06 README.

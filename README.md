@@ -21,3 +21,42 @@ Read the numbered folders in order — each layer builds on the previous one:
 | [02-Requirements/](02-Requirements/) | Business and system requirements |
 | [03-Solution/](03-Solution/) | Solution draft, architecture, backlog |
 | [04-UI/](04-UI/) | Design system, mockups ([mockups/](04-UI/mockups/)) |
+| [docs/run_book.md](docs/run_book.md) | Install, run, and verify the API locally |
+
+## Implementation
+
+Python package: [geo_expression_service/](geo_expression_service/) (`GET /health`, `GET /expression`).
+
+Quick start (from repository root):
+
+```bash
+make install    # create .venv + pip install -e .
+make run        # start API on http://127.0.0.1:8000
+make health     # verify GET /health (in another terminal)
+```
+
+Manual setup (without Make):
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate   # Windows: .\.venv\Scripts\Activate.ps1
+pip install -e .
+python -m uvicorn geo_expression_service.main:app --host 127.0.0.1 --port 8000
+```
+
+| Make target | Description |
+|-------------|-------------|
+| `make help` | List all commands |
+| `make install` | Create `.venv` and install dependencies |
+| `make install-dev` | Install with pytest and ruff |
+| `make lint` | Run ruff linter |
+| `make format` | Auto-format with ruff |
+| `make fix` | Auto-fix lint issues + format |
+| `make check` | Lint + pytest |
+| `make run` | Start uvicorn |
+| `make run-dev` | Start uvicorn with `--reload` |
+| `make test` | Run `pytest -v` |
+| `make health` | Curl `/health` |
+| `make plot` | Save expression PNG (`GSE`, `GENES` env vars) |
+
+See [docs/run_book.md](docs/run_book.md) for full instructions.

@@ -37,8 +37,8 @@ Implement items in **Order** (summary table). Within a slice group, complete tas
 - **Slice:** F-01
 - **Screens / routes:** `route.health` (`GET /health`)
 - **Tasks:**
-  - [x] Create `geo_expression_service/pyproject.toml` at monorepo root with Python 3.11+, FastAPI, uvicorn, pydantic v2, pydantic-settings, httpx, matplotlib, numpy — **no pandas** (stdlib `csv` for tabular parsing)
-  - [x] Scaffold package layout per architecture: `geo_expression_service/geo_expression_service/{main.py,config.py,logging.py,exceptions.py,api/,services/,domain/,adapters/}`
+  - [x] Create `pyproject.toml` at repository root with Python 3.11+, FastAPI, uvicorn, pydantic v2, pydantic-settings, httpx, matplotlib, numpy — **no pandas** (stdlib `csv` for tabular parsing)
+  - [x] Scaffold package layout: `geo_expression_service/{main.py,config.py,logging.py,exceptions.py,api/,services/,domain/,adapters/}`
   - [x] Implement `config.py` (`Settings`, `GEO_*` env prefix): cache dir placeholder, HTTP timeout, concurrency limit keys (used later)
   - [x] Implement `logging.py`: middleware assigning `request_id`; summary log format per project logging rules
   - [x] Implement `exceptions.py`: domain hierarchy (`InvalidGeneCountError`, invalid GSE format, base `GeoExpressionError`) — no bare `Exception` in handlers
@@ -155,11 +155,11 @@ Implement items in **Order** (summary table). Within a slice group, complete tas
 - **Slice:** F-06
 - **Screens / routes:** — (docs only; covers all routes)
 - **Tasks:**
-  - [ ] Author `geo_expression_service/README.md`: clean-env install, uvicorn run, both endpoints with curl examples
+  - [ ] Author root `README.md` + `docs/run_book.md`: clean-env install, uvicorn run, both endpoints with curl examples
   - [ ] Add paragraph on gene-mapping trade-offs (aggregation, multi-gene cells, unmapped probes, **stdlib `csv` vs pandas**)
   - [ ] Add paragraph on cache layers, eviction, and negative caching
   - [ ] Document validation rules (2–5 genes, GSE format), stub LLM mode, clarification vs error behavior for chat
-  - [ ] Create `geo_expression_service/.env.example` with `GEO_*` and optional LLM key
+  - [ ] Create `.env.example` at repository root with `GEO_*` and optional LLM key
   - [ ] Cross-link solution draft acceptance checklist items verifiable via README/OpenAPI
   - [ ] Optional stretch: note recommended tests in `tests/` (mapping unit, cache speedup) without blocking MVP
 - **Done when:**
@@ -211,7 +211,7 @@ Pre-implementation interview — locked for Phase 7:
 
 | # | Topic | Decision |
 | --- | --- | --- |
-| 1 | Repo layout | **Monorepo** — `geo_expression_service/` at workspace root alongside `ncbi-viewer/`; single assessor repo link |
+| 1 | Repo layout | **Single repo** — `pyproject.toml` + Python package `geo_expression_service/` at repository root |
 | 2 | Matrix / annotation parsing | **stdlib `csv` only** — no pandas; document trade-offs in BL-06 README |
 | 3 | F-05 (BL-04) in assessment MVP | **Yes** — retries, timeouts, semaphore ship before assessment |
 | 4 | Order after cache | **Chat before resilience** — BL-05 then BL-04 after BL-03 |
@@ -219,7 +219,7 @@ Pre-implementation interview — locked for Phase 7:
 
 ## Assumptions
 
-1. Implementation code root is `geo_expression_service/` at monorepo workspace root (sibling to `ncbi-viewer/`) — **confirmed**.
+1. Python package `geo_expression_service/` and `pyproject.toml` at repository root — **confirmed**.
 2. No mockup-plan screen ids — route ids satisfy coverage until `04-UI/` exists.
 3. Tabular parsing uses **stdlib `csv` only** (no pandas) — **confirmed**; BL-06 README explains trade-offs.
 4. Chat MVP is stateless (single-turn per `POST /chat`).
