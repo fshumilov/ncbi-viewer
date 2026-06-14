@@ -38,8 +38,11 @@ class GeoClient:
 
     async def fetch_platform_annotation(self, gpl_id: str) -> str:
         url = PLATFORM_SOFT_URL.format(gpl_id=gpl_id)
-        raw_bytes = await self._download_bytes(url, resource_label=f"platform {gpl_id}")
+        raw_bytes = await self.download_bytes(url, resource_label=f"platform {gpl_id}")
         return raw_bytes.decode("utf-8", errors="replace")
+
+    async def download_bytes(self, url: str, resource_label: str) -> bytes:
+        return await self._download_bytes(url, resource_label=resource_label)
 
     async def _download_bytes(self, url: str, resource_label: str) -> bytes:
         try:

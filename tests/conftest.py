@@ -13,6 +13,16 @@ PLATFORM_SOFT_FIXTURE = """\
 !platform_table_end
 """
 
+SERIES_MATRIX_FIXTURE = """\
+!Series_geo_accession\t"GSE2034"
+!Series_platform_id\t"GPL123"
+!series_matrix_table_begin
+"ID_REF"\t"GSM1"\t"GSM2"
+"probe1"\t100.0\t200.0
+"probe3"\t50.0\t60.0
+!series_matrix_table_end
+"""
+
 
 @pytest.fixture
 def platform_soft_text() -> str:

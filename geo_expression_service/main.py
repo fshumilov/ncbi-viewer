@@ -5,7 +5,7 @@ import httpx
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from geo_expression_service.adapters.expression_cache import NullExpressionCache
+from geo_expression_service.adapters.cache_store import CacheStore
 from geo_expression_service.adapters.geo_client import GeoClient
 from geo_expression_service.api.routes import expression, health
 from geo_expression_service.config import Settings, get_settings
@@ -26,9 +26,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.settings = settings
     app.state.http_client = httpx.AsyncClient(timeout=settings.http_timeout_s)
     geo_client = GeoClient(app.state.http_client)
+    cache_store = CacheStore(settings)
     app.state.expression_service = ExpressionService(
         geo_client=geo_client,
-        cache=NullExpressionCache(),
+        cache=cache_store,
     )
     yield
     await app.state.http_client.aclose()
