@@ -7,7 +7,7 @@ This document defines the implementable scope contract, high-level architecture 
 ## References
 
 - `01-Context/01-stakeholders.md`
-- `../task/GEO_EXPRESSION_SERVICE_SPEC.md` — assessment task specification (primary scope source)
+- `../docs/GEO_EXPRESSION_SERVICE_SPEC.md` — assessment task specification (primary scope source)
 - `../task/GEO_EXPRESSION_SERVICE.md` — extended task description (design recommendations, grading criteria)
 
 **Assumption:** `02-Requirements/01-business-requirements.md` and `02-Requirements/02-system-requirements.md` are not yet authored; scope and acceptance items below are derived from stakeholders and the task spec. **Decision (2025-06-14):** defer Steps 6–7; start implementation at F-01; remap to BR/SR when documents exist.

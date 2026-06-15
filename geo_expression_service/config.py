@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     cache_max_entries: int = Field(default=256, ge=1)
     cache_max_bytes: int = Field(default=512 * 1024 * 1024, ge=1)
     http_timeout_s: float = Field(default=120.0, gt=0)
+    http_retry_count: int = Field(default=3, ge=0)
+    http_retry_backoff_s: float = Field(default=1.0, gt=0)
     concurrency_limit: int = Field(default=4, ge=1)
     stub_llm: bool = Field(default=False)
     openai_api_key: str | None = Field(
