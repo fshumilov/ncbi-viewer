@@ -34,3 +34,13 @@ class ExpressionResult(BaseModel):
     sample_values_by_gene: dict[str, list[float]] | None = None
     cached: bool = False
     duration_ms: float
+
+
+class ChatRequest(BaseModel):
+    message: str = Field(min_length=1)
+
+
+class ChatResponse(BaseModel):
+    message: str
+    expression: ExpressionResult | None = None
+    tool_invoked: bool = False

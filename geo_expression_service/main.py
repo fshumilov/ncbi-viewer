@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 
 from geo_expression_service.adapters.cache_store import CacheStore
 from geo_expression_service.adapters.geo_client import GeoClient
-from geo_expression_service.api.routes import expression, health
+from geo_expression_service.api.routes import chat, expression, health
 from geo_expression_service.config import Settings, get_settings
 from geo_expression_service.exceptions import (
     GeoDownloadError,
@@ -17,6 +17,7 @@ from geo_expression_service.exceptions import (
     MappingError,
 )
 from geo_expression_service.logging import RequestIdMiddleware, configure_logging
+from geo_expression_service.services.chat_agent import ChatAgent
 from geo_expression_service.services.expression_service import ExpressionService
 
 
@@ -30,6 +31,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.expression_service = ExpressionService(
         geo_client=geo_client,
         cache=cache_store,
+    )
+    app.state.chat_agent = ChatAgent(
+        expression_service=app.state.expression_service,
+        settings=settings,
     )
     yield
     await app.state.http_client.aclose()
@@ -47,6 +52,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_middleware(RequestIdMiddleware)
     app.include_router(health.router)
     app.include_router(expression.router)
+    app.include_router(chat.router)
     register_exception_handlers(app)
     return app
 

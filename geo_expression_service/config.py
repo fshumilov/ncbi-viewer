@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -10,6 +10,7 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore",
+        populate_by_name=True,
     )
 
     cache_dir: Path = Field(default=Path(".cache/geo_expression"))
@@ -18,6 +19,14 @@ class Settings(BaseSettings):
     http_timeout_s: float = Field(default=120.0, gt=0)
     concurrency_limit: int = Field(default=4, ge=1)
     stub_llm: bool = Field(default=False)
+    openai_api_key: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("OPENAI_API_KEY", "GEO_OPENAI_API_KEY"),
+    )
+    openai_model: str = Field(default="gpt-4o-mini")
+
+    def should_use_stub_llm(self) -> bool:
+        return self.stub_llm or not self.openai_api_key
 
 
 def get_settings() -> Settings:
