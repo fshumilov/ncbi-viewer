@@ -25,7 +25,7 @@ Implement items in **Order** (summary table). Within a slice group, complete tas
 | 2 | F-02 | BL-02 | done | Cold-path expression: GeoClient, mapper, plotter, `GET /expression` | BL-01 |
 | 3 | F-03 | BL-03 | done | Two-tier CacheStore + expression cache seam (`cached`, `duration_ms`) | BL-02 |
 | 4 | F-04 | BL-05 | done | ChatAgent, ExpressionTool, `POST /chat` (stub LLM OK) | BL-02, BL-03 |
-| 5 | F-05 | BL-04 | not started | GeoClient retries, timeouts, bounded concurrency, HTTP error mapping | BL-02, BL-05 |
+| 5 | F-05 | BL-04 | done | GeoClient retries, timeouts, bounded concurrency, HTTP error mapping | BL-02, BL-05 |
 | 6 | F-06 | BL-06 | not started | README runbook, `.env.example`, acceptance cross-links | BL-03, BL-04, BL-05 |
 
 ## Items
@@ -135,11 +135,11 @@ Implement items in **Order** (summary table). Within a slice group, complete tas
 - **Slice:** F-05
 - **Screens / routes:** `route.expression` (error paths on upstream failure)
 - **Tasks:**
-  - [ ] Extend `config.py`: retry count, backoff, `GEO_HTTP_TIMEOUT_S`, `GEO_CONCURRENCY_LIMIT`
-  - [ ] Add retries with backoff and timeout to `adapters/geo_client.py` (httpx async only)
-  - [ ] Add bounded semaphore for parallel multi-file fetches
-  - [ ] Map `GeoDownloadError`, timeout, upstream failures to specific HTTP codes in API layer (404/502/504 per architecture — no hung requests)
-  - [ ] Log retry/timeout events with `request_id` under load
+  - [x] Extend `config.py`: retry count, backoff, `GEO_HTTP_TIMEOUT_S`, `GEO_CONCURRENCY_LIMIT`
+  - [x] Add retries with backoff and timeout to `adapters/geo_client.py` (httpx async only)
+  - [x] Add bounded semaphore for parallel multi-file fetches
+  - [x] Map `GeoDownloadError`, timeout, upstream failures to specific HTTP codes in API layer (404/502/504 per architecture — no hung requests)
+  - [x] Log retry/timeout events with `request_id` under load
 - **Done when:**
   - Simulated slow or failing GEO response returns structured HTTP error within timeout — request does not hang (solution draft — resilience group, when present)
   - Parallel fetches respect semaphore limit observable in logs
