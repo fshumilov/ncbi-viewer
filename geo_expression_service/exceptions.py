@@ -14,6 +14,14 @@ class GeoDownloadError(GeoExpressionError):
     """Raised when NCBI GEO data cannot be downloaded."""
 
 
+class GeoNotFoundError(GeoDownloadError):
+    """Raised when NCBI GEO returns HTTP 404 for a requested resource."""
+
+
+class GeoTimeoutError(GeoDownloadError):
+    """Raised when a NCBI GEO download exceeds the configured timeout."""
+
+
 class MappingError(GeoExpressionError):
     """Raised when probe-to-gene mapping fails irrecoverably."""
 

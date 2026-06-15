@@ -12,6 +12,8 @@ from geo_expression_service.config import Settings, get_settings
 from geo_expression_service.exceptions import (
     GeoDownloadError,
     GeoExpressionError,
+    GeoNotFoundError,
+    GeoTimeoutError,
     InvalidGeneCountError,
     InvalidGseFormatError,
     MappingError,
@@ -26,7 +28,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
     app.state.settings = settings
     app.state.http_client = httpx.AsyncClient(timeout=settings.http_timeout_s)
-    geo_client = GeoClient(app.state.http_client)
+    geo_client = GeoClient(app.state.http_client, settings=settings)
     cache_store = CacheStore(settings)
     app.state.expression_service = ExpressionService(
         geo_client=geo_client,
@@ -71,6 +73,20 @@ def register_exception_handlers(app: FastAPI) -> None:
         exc: InvalidGseFormatError,
     ) -> JSONResponse:
         return _validation_error_response(request, "invalid_gse_format", str(exc))
+
+    @app.exception_handler(GeoNotFoundError)
+    async def handle_geo_not_found_error(
+        request: Request,
+        exc: GeoNotFoundError,
+    ) -> JSONResponse:
+        return _service_error_response(request, 404, "geo_not_found", str(exc))
+
+    @app.exception_handler(GeoTimeoutError)
+    async def handle_geo_timeout_error(
+        request: Request,
+        exc: GeoTimeoutError,
+    ) -> JSONResponse:
+        return _service_error_response(request, 504, "geo_timeout", str(exc))
 
     @app.exception_handler(GeoDownloadError)
     async def handle_geo_download_error(
