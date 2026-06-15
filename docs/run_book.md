@@ -134,6 +134,26 @@ make plot GSE=GSE2034 GENES=TP53,BRCA1 PLOT_OUT=my_plot.png
 3. Строит boxplot по выбранным генам и возвращает PNG в base64.
 4. Через `POST /chat` принимает запрос на естественном языке, вызывает тот же pipeline экспрессии (ExpressionTool) и возвращает текст + plot.
 
+Подробнее о компромиссах mapping и cache — в [README.md](../README.md#design-gene-mapping) (англ.).
+
+<a id="design-mapping"></a>
+
+### Gene mapping (кратко)
+
+- Пробы сопоставляются с символами генов по таблице GPL (колонка `Gene Symbol` / аналоги).
+- Ячейки вида `GENE /// OTHER` разбиваются; запрошенный символ мапится, если присутствует.
+- Несколько проб на один ген → **mean_log2** по сэмплам; нулевой маппинг → `skip_reason`, не опускается из ответа.
+- Парсинг matrix/annotation — **stdlib `csv`**, без pandas (меньше зависимостей; см. README).
+
+<a id="design-cache"></a>
+
+### Cache (кратко)
+
+- **Memory LRU** → **disk** под `GEO_CACHE_DIR`; ключи `raw:`, `map:`, `result:`.
+- Eviction по `GEO_CACHE_MAX_ENTRIES` и `GEO_CACHE_MAX_BYTES`; disk переживает restart процесса.
+- **Negative cache** — sentinel при ошибке GPL, чтобы не качать повторно.
+- В ответе: `cached`, `duration_ms`.
+
 | Метод | Путь | NCBI |
 |-------|------|------|
 | `GET` | `/health` | нет |
@@ -714,17 +734,20 @@ curl -s -X POST http://127.0.0.1:8000/chat \
 
 ## 10. Переменные окружения
 
-Файл `.env` создаётся в **корне репозитория** (рядом с `pyproject.toml`).
+Шаблон всех ключей: [`.env.example`](../.env.example). Файл `.env` создаётся в **корне репозитория** (рядом с `pyproject.toml`).
 
 | Переменная | По умолчанию | Описание |
 |------------|--------------|----------|
 | `GEO_HTTP_TIMEOUT_S` | `120` | Таймаут HTTP к NCBI (секунды) |
+| `GEO_HTTP_RETRY_COUNT` | `3` | Число повторов при сбое загрузки |
+| `GEO_HTTP_RETRY_BACKOFF_S` | `1.0` | Базовая задержка backoff между retry (сек) |
+| `GEO_CONCURRENCY_LIMIT` | `4` | Параллельные загрузки (semaphore) |
 | `GEO_CACHE_DIR` | `.cache/geo_expression` | Каталог двухуровневого кэша |
 | `GEO_CACHE_MAX_ENTRIES` | `256` | Лимит записей кэша |
 | `GEO_CACHE_MAX_BYTES` | `536870912` | Лимит размера кэша (512 MB) |
-| `GEO_CONCURRENCY_LIMIT` | `4` | Параллельные загрузки (BL-04) |
 | `GEO_STUB_LLM` | `false` | `true` — stub-режим чата без OpenAI |
 | `OPENAI_API_KEY` | — | Ключ OpenAI; без него — stub |
+| `GEO_OPENAI_API_KEY` | — | Альias для ключа OpenAI |
 | `GEO_OPENAI_MODEL` | `gpt-4o-mini` | Модель для LLM-режима чата |
 
 Пример `.env` для медленной сети и stub-чата:
@@ -770,6 +793,8 @@ pytest -v
 | `tests/test_expression_route.py` | HTTP 422 до GEO fetch |
 | `tests/test_expression_service.py` | orchestration с mock GeoClient |
 | `tests/test_cache_store.py` | LRU, disk tier, negative cache |
+| `tests/test_geo_client.py` | retry, timeout, semaphore (mock httpx) |
+| `tests/test_geo_error_routes.py` | HTTP 502/504 mapping для GeoClient errors |
 | `tests/test_chat_route.py` | парсер чата, stub happy path, clarification |
 | `tests/test_health_route.py` | `GET /health` |
 
@@ -819,6 +844,7 @@ ncbi-viewer/                 ← корень git-репозитория (venv, 
 ├── Makefile
 ├── pyproject.toml
 ├── README.md
+├── .env.example
 ├── .local/diagrams/
 ├── docs/
 │   └── run_book.md          ← этот файл
@@ -837,6 +863,8 @@ ncbi-viewer/                 ← корень git-репозитория (venv, 
 <a id="step-13-checklist"></a>
 
 ## 14. Чеклист
+
+Соответствует [acceptance checklist](../03-Solution/01-solution-draft.md#acceptance-checklist-manual) в solution draft и таблице в [README.md](../README.md#acceptance-checklist-manual-verification).
 
 - [ ] `python3 --version` (или `python --version`) → 3.11+
 - [ ] `cd ncbi-viewer` (корень репозитория)
