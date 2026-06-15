@@ -9,7 +9,7 @@ Ordered work for Phase 7+; one testable vertical increment per slice group; subo
 - Architecture: `03-Solution/03-architecture.md`
 - Feature slices: `03-Solution/02-feature-slices.md`
 - Solution draft (scope + acceptance): `03-Solution/01-solution-draft.md`
-- Task spec: `../task/GEO_EXPRESSION_SERVICE_SPEC.md`
+- Task spec: `../docs/GEO_EXPRESSION_SERVICE_SPEC.md`
 - Stakeholders: `01-Context/01-stakeholders.md`
 - **Not yet authored:** `02-Requirements/02-system-requirements.md`, `04-UI/` (deferred — API-first; no mockup-plan screen ids)
 
@@ -19,14 +19,16 @@ Implement items in **Order** (summary table). Within a slice group, complete tas
 
 ## Backlog summary
 
-| Order | Slice | Item ids | Status | Theme (one line) | Blocked by |
-| --- | --- | --- | --- | --- | --- |
-| 1 | F-01 | BL-01 | done | Project scaffold, config, logging, validation, health route | — |
-| 2 | F-02 | BL-02 | done | Cold-path expression: GeoClient, mapper, plotter, `GET /expression` | BL-01 |
-| 3 | F-03 | BL-03 | done | Two-tier CacheStore + expression cache seam (`cached`, `duration_ms`) | BL-02 |
-| 4 | F-04 | BL-05 | done | ChatAgent, ExpressionTool, `POST /chat` (stub LLM OK) | BL-02, BL-03 |
-| 5 | F-05 | BL-04 | done | GeoClient retries, timeouts, bounded concurrency, HTTP error mapping | BL-02, BL-05 |
-| 6 | F-06 | BL-06 | not started | README runbook, `.env.example`, acceptance cross-links | BL-03, BL-04, BL-05 |
+
+| Order | Slice | Item ids | Status | Theme (one line)                                                      | Blocked by          |
+| ----- | ----- | -------- | ------ | --------------------------------------------------------------------- | ------------------- |
+| 1     | F-01  | BL-01    | done   | Project scaffold, config, logging, validation, health route           | —                   |
+| 2     | F-02  | BL-02    | done   | Cold-path expression: GeoClient, mapper, plotter, `GET /expression`   | BL-01               |
+| 3     | F-03  | BL-03    | done   | Two-tier CacheStore + expression cache seam (`cached`, `duration_ms`) | BL-02               |
+| 4     | F-04  | BL-05    | done   | ChatAgent, ExpressionTool, `POST /chat` (stub LLM OK)                 | BL-02, BL-03        |
+| 5     | F-05  | BL-04    | done   | GeoClient retries, timeouts, bounded concurrency, HTTP error mapping  | BL-02, BL-05        |
+| 6     | F-06  | BL-06    | done   | README runbook, `.env.example`, acceptance cross-links                | BL-03, BL-04, BL-05 |
+
 
 ## Items
 
@@ -39,7 +41,7 @@ Implement items in **Order** (summary table). Within a slice group, complete tas
 - **Tasks:**
   - [x] Create `pyproject.toml` at repository root with Python 3.11+, FastAPI, uvicorn, pydantic v2, pydantic-settings, httpx, matplotlib, numpy — **no pandas** (stdlib `csv` for tabular parsing)
   - [x] Scaffold package layout: `geo_expression_service/{main.py,config.py,logging.py,exceptions.py,api/,services/,domain/,adapters/}`
-  - [x] Implement `config.py` (`Settings`, `GEO_*` env prefix): cache dir placeholder, HTTP timeout, concurrency limit keys (used later)
+  - [x] Implement `config.py` (`Settings`, `GEO_`* env prefix): cache dir placeholder, HTTP timeout, concurrency limit keys (used later)
   - [x] Implement `logging.py`: middleware assigning `request_id`; summary log format per project logging rules
   - [x] Implement `exceptions.py`: domain hierarchy (`InvalidGeneCountError`, invalid GSE format, base `GeoExpressionError`) — no bare `Exception` in handlers
   - [x] Implement `domain/validation.py`: normalize GSE to uppercase `GSE\d+`; normalize gene symbols uppercase; enforce 2–5 unique genes
@@ -155,13 +157,13 @@ Implement items in **Order** (summary table). Within a slice group, complete tas
 - **Slice:** F-06
 - **Screens / routes:** — (docs only; covers all routes)
 - **Tasks:**
-  - [ ] Author root `README.md` + `docs/run_book.md`: clean-env install, uvicorn run, both endpoints with curl examples
-  - [ ] Add paragraph on gene-mapping trade-offs (aggregation, multi-gene cells, unmapped probes, **stdlib `csv` vs pandas**)
-  - [ ] Add paragraph on cache layers, eviction, and negative caching
-  - [ ] Document validation rules (2–5 genes, GSE format), stub LLM mode, clarification vs error behavior for chat
-  - [ ] Create `.env.example` at repository root with `GEO_*` and optional LLM key
-  - [ ] Cross-link solution draft acceptance checklist items verifiable via README/OpenAPI
-  - [ ] Optional stretch: note recommended tests in `tests/` (mapping unit, cache speedup) without blocking MVP
+  - [x] Author root `README.md` + `docs/run_book.md`: clean-env install, uvicorn run, both endpoints with curl examples
+  - [x] Add paragraph on gene-mapping trade-offs (aggregation, multi-gene cells, unmapped probes, **stdlib `csv` vs pandas**)
+  - [x] Add paragraph on cache layers, eviction, and negative caching
+  - [x] Document validation rules (2–5 genes, GSE format), stub LLM mode, clarification vs error behavior for chat
+  - [x] Create `.env.example` at repository root with `GEO_`* and optional LLM key
+  - [x] Cross-link solution draft acceptance checklist items verifiable via README/OpenAPI
+  - [x] Optional stretch: note recommended tests in `tests/` (mapping unit, cache speedup) without blocking MVP
 - **Done when:**
   - Assessor can follow README from clean env; service starts; `GET /health`, `GET /expression`, and `POST /chat` respond
   - README contains distinct mapping and cache decision paragraphs (solution draft — documentation group)
@@ -174,24 +176,28 @@ Implement items in **Order** (summary table). Within a slice group, complete tas
 
 **Assumption:** `04-UI/03-mockup-plan.md` does not exist (solution non-goal). Coverage uses architecture **route ids** instead of mockup screen ids.
 
-| Route id (architecture) | Backlog item(s) | Slice |
-| --- | --- | --- |
-| `route.health` | BL-01 | F-01 |
-| `route.expression` | BL-02, BL-03, BL-04 | F-02, F-03, F-05 |
-| `route.chat` | BL-05 | F-04 |
+
+| Route id (architecture) | Backlog item(s)     | Slice            |
+| ----------------------- | ------------------- | ---------------- |
+| `route.health`          | BL-01               | F-01             |
+| `route.expression`      | BL-02, BL-03, BL-04 | F-02, F-03, F-05 |
+| `route.chat`            | BL-05               | F-04             |
+
 
 No orphan route ids. When `04-UI/` is authored, re-run step 17 to map mockup screen ids to these items.
 
 ## Acceptance traceability (optional, lean)
 
-| Backlog item | Solution draft checklist area / themes |
-| --- | --- |
-| BL-01 | Ops — service starts; validation before GEO I/O |
-| BL-02 | Direct expression — happy path, gene bounds, mapping transparency, multi-gene cells, empty/partial edge |
-| BL-03 | Direct expression — cache cold/warm, restart survival, bounded cache |
-| BL-04 | Resilience — timeout/retry, bounded concurrency, async I/O |
-| BL-05 | Chat agent — happy path, tool invocation, grounded answer, parse failure, stub LLM |
-| BL-06 | Documentation — README run, mapping/cache paragraphs |
+
+| Backlog item | Solution draft checklist area / themes                                                                  |
+| ------------ | ------------------------------------------------------------------------------------------------------- |
+| BL-01        | Ops — service starts; validation before GEO I/O                                                         |
+| BL-02        | Direct expression — happy path, gene bounds, mapping transparency, multi-gene cells, empty/partial edge |
+| BL-03        | Direct expression — cache cold/warm, restart survival, bounded cache                                    |
+| BL-04        | Resilience — timeout/retry, bounded concurrency, async I/O                                              |
+| BL-05        | Chat agent — happy path, tool invocation, grounded answer, parse failure, stub LLM                      |
+| BL-06        | Documentation — README run, mapping/cache paragraphs                                                    |
+
 
 Formal **SR-…** IDs pending `02-Requirements/02-system-requirements.md` (Step 7).
 
@@ -209,13 +215,15 @@ Formal **SR-…** IDs pending `02-Requirements/02-system-requirements.md` (Step 
 
 Pre-implementation interview — locked for Phase 7:
 
-| # | Topic | Decision |
-| --- | --- | --- |
-| 1 | Repo layout | **Single repo** — `pyproject.toml` + Python package `geo_expression_service/` at repository root |
-| 2 | Matrix / annotation parsing | **stdlib `csv` only** — no pandas; document trade-offs in BL-06 README |
-| 3 | F-05 (BL-04) in assessment MVP | **Yes** — retries, timeouts, semaphore ship before assessment |
-| 4 | Order after cache | **Chat before resilience** — BL-05 then BL-04 after BL-03 |
-| 5 | Formal BR/SR (Steps 6–7) | **Defer** — start BL-01 now; author requirements in parallel or post-MVP |
+
+| #   | Topic                          | Decision                                                                                         |
+| --- | ------------------------------ | ------------------------------------------------------------------------------------------------ |
+| 1   | Repo layout                    | **Single repo** — `pyproject.toml` + Python package `geo_expression_service/` at repository root |
+| 2   | Matrix / annotation parsing    | **stdlib `csv` only** — no pandas; document trade-offs in BL-06 README                           |
+| 3   | F-05 (BL-04) in assessment MVP | **Yes** — retries, timeouts, semaphore ship before assessment                                    |
+| 4   | Order after cache              | **Chat before resilience** — BL-05 then BL-04 after BL-03                                        |
+| 5   | Formal BR/SR (Steps 6–7)       | **Defer** — start BL-01 now; author requirements in parallel or post-MVP                         |
+
 
 ## Assumptions
 
@@ -233,3 +241,4 @@ Pre-implementation interview — locked for Phase 7:
 2. **SSE streaming:** Remains stretch; BL-05 uses blocking JSON unless scope changes.
 3. **Scenarios / glossary:** Author `01-Context/02-scenarios.md` and `01-Context/03-glossary.md` for chat phrasing nuance — optional, non-blocking.
 4. **Researcher persona:** Bench scientist vs core-facility analyst — affects chat phrasing defaults only.
+
