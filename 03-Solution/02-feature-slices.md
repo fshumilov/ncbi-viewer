@@ -12,7 +12,7 @@ This document defines a vertical build order for implementing the GEO Expression
 - Scenarios: `01-Context/02-scenarios.md` — **not yet authored** (journeys taken from solution draft § User journeys)
 - Glossary: `01-Context/03-glossary.md` — **not yet authored** (terms from stakeholders and solution draft: GSE, GPL, GSM, probe, ExpressionService, CacheStore)
 - Stakeholders: `01-Context/01-stakeholders.md`
-- Task spec: `../task/GEO_EXPRESSION_SERVICE_SPEC.md`
+- Task spec: `../docs/GEO_EXPRESSION_SERVICE_SPEC.md`
 
 ---
 

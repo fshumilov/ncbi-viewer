@@ -9,7 +9,7 @@ Build-time contract for implementers; expands solution draft Part B (`03-Solutio
 - Solution draft: `03-Solution/01-solution-draft.md`
 - Feature slices: `03-Solution/02-feature-slices.md`
 - Stakeholders: `01-Context/01-stakeholders.md`
-- Task spec: `../task/GEO_EXPRESSION_SERVICE_SPEC.md`
+- Task spec: `../docs/GEO_EXPRESSION_SERVICE_SPEC.md`
 - Extended task notes: `../task/GEO_EXPRESSION_SERVICE.md`
 - Project README: `README.md`
 - Implementation decisions: `03-Solution/04-backlog.md` § Implementation decisions (2025-06-14)

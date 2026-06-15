@@ -9,7 +9,7 @@ Ordered work for Phase 7+; one testable vertical increment per slice group; subo
 - Architecture: `03-Solution/03-architecture.md`
 - Feature slices: `03-Solution/02-feature-slices.md`
 - Solution draft (scope + acceptance): `03-Solution/01-solution-draft.md`
-- Task spec: `../task/GEO_EXPRESSION_SERVICE_SPEC.md`
+- Task spec: `../docs/GEO_EXPRESSION_SERVICE_SPEC.md`
 - Stakeholders: `01-Context/01-stakeholders.md`
 - **Not yet authored:** `02-Requirements/02-system-requirements.md`, `04-UI/` (deferred — API-first; no mockup-plan screen ids)
 
