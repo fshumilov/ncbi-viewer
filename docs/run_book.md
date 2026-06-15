@@ -20,14 +20,20 @@
   - [Примеры запросов](#expression-examples)
   - [Ожидаемые логи сервера](#ncbi-logs)
   - [Пример ответа](#expression-response)
-  - [Сохранить график](#save-plot)
-- [7. Swagger UI](#step-05-swagger)
-- [8. Примеры ошибок](#step-08-errors)
-- [9. Переменные окружения](#step-09-env)
-- [10. Тесты (опционально)](#step-10-tests)
-- [11. Типичные проблемы](#step-11-troubleshooting)
-- [12. Структура репозитория](#step-12-structure)
-- [13. Чеклист](#step-13-checklist)
+  - [Сохранить график / декодировать base64](#save-plot)
+- [7. Чат: POST /chat](#step-08-chat)
+  - [Stub и LLM режимы](#chat-modes)
+  - [Тело запроса](#chat-body)
+  - [Примеры запросов](#chat-examples)
+  - [Пример ответа](#chat-response)
+  - [Clarification (без tool)](#chat-clarification)
+- [8. Swagger UI](#step-05-swagger)
+- [9. Примеры ошибок](#step-08-errors)
+- [10. Переменные окружения](#step-09-env)
+- [11. Тесты (опционально)](#step-10-tests)
+- [12. Типичные проблемы](#step-11-troubleshooting)
+- [13. Структура репозитория](#step-12-structure)
+- [14. Чеклист](#step-13-checklist)
 - [Полезные ссылки](#links)
 
 > Ссылки работают в **Markdown Preview** (`Ctrl+Shift+V`).
@@ -56,9 +62,12 @@ python -m uvicorn geo_expression_service.main:app --host 127.0.0.1 --port 8000
 ```fish
 curl -s http://127.0.0.1:8000/health
 curl -s --max-time 300 "http://127.0.0.1:8000/expression?gse=GSE2034&genes=TP53,BRCA1"
+curl -s --max-time 300 -X POST http://127.0.0.1:8000/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Show me TP53 and BRCA1 expression in GSE2034"}'
 ```
 
-Первый запрос `/expression` скачивает ~14 MB matrix + ~46 MB аннотацию платформы с NCBI — **30–120 секунд** это нормально.
+Первый запрос `/expression` или `/chat` с новой парой `(gse, genes)` скачивает ~14 MB matrix + ~46 MB аннотацию платформы с NCBI — **30–120 секунд** это нормально.
 
 **PowerShell (Windows, без WSL):**
 
@@ -123,13 +132,13 @@ make plot GSE=GSE2034 GENES=TP53,BRCA1 PLOT_OUT=my_plot.png
 1. Скачивает матрицу экспрессии из [NCBI GEO](https://www.ncbi.nlm.nih.gov/geo/) по идентификатору серии (GSE).
 2. Скачивает аннотацию платформы (GPL) и сопоставляет пробы с символами генов.
 3. Строит boxplot по выбранным генам и возвращает PNG в base64.
+4. Через `POST /chat` принимает запрос на естественном языке, вызывает тот же pipeline экспрессии (ExpressionTool) и возвращает текст + plot.
 
 | Метод | Путь | NCBI |
 |-------|------|------|
 | `GET` | `/health` | нет |
 | `GET` | `/expression` | **да** — FTP matrix + HTTP platform annotation |
-
-> Эндпоинт чата (`POST /chat`) пока не реализован — backlog BL-05.
+| `POST` | `/chat` | **да**, если распознаны GSE и 2–5 генов (тот же `ExpressionService`) |
 
 ---
 
@@ -138,7 +147,7 @@ make plot GSE=GSE2034 GENES=TP53,BRCA1 PLOT_OUT=my_plot.png
 ## Требования
 
 - **Python 3.11+** (`python3 --version` в WSL, `python --version` в Windows)
-- **Интернет** — `/expression` обращается к `ftp.ncbi.nlm.nih.gov` и `www.ncbi.nlm.nih.gov`
+- **Интернет** — `/expression` и `/chat` (при успешном tool call) обращаются к `ftp.ncbi.nlm.nih.gov` и `www.ncbi.nlm.nih.gov`
 - **Windows / WSL / macOS / Linux**
 
 ---
@@ -469,19 +478,33 @@ INFO geo_expression_service.services.expression_service Expression finished: cac
 |------|-------|
 | `plot.content` | PNG в base64 |
 | `mapping.gpl_id` | Платформа, скачанная с NCBI |
-| `cached` | Сейчас всегда `false` (кэш — заглушка, BL-03) |
+| `cached` | `false` на cold path; `true` при повторном запросе с тем же `(gse, genes)` |
 | `duration_ms` | Время запроса, включая загрузку с NCBI |
 
 <a id="save-plot"></a>
 
-### Сохранить график
+### Сохранить график / декодировать base64
 
-**PowerShell:**
+Поле `plot.content` (в `/expression`) или `expression.plot.content` (в `/chat`) — это **PNG без префикса** `data:image/png;base64,`.
+
+**Онлайн (вставить base64 и скачать PNG):** [Base64 Guru — Decode image](https://base64.guru/converter/decode/image)
+
+**PowerShell** (`/expression`):
 
 ```powershell
 $response = Invoke-RestMethod -Uri "http://127.0.0.1:8000/expression?gse=GSE2034&genes=TP53,BRCA1" -TimeoutSec 300
 [IO.File]::WriteAllBytes("expression_plot.png", [Convert]::FromBase64String($response.plot.content))
 Write-Host "Сохранено: expression_plot.png"
+```
+
+**PowerShell** (`/chat`):
+
+```powershell
+$body = @{ message = "Show me TP53 and BRCA1 expression in GSE2034" } | ConvertTo-Json
+$response = Invoke-RestMethod -Uri "http://127.0.0.1:8000/chat" -Method POST `
+  -ContentType "application/json" -Body $body -TimeoutSec 300
+[IO.File]::WriteAllBytes("chat_plot.png", [Convert]::FromBase64String($response.expression.plot.content))
+Write-Host "Сохранено: chat_plot.png, tool_invoked=$($response.tool_invoked)"
 ```
 
 **Python:**
@@ -503,9 +526,140 @@ print(f"Готово: {data['gse_id']}, duration_ms={data['duration_ms']}")
 
 ---
 
+<a id="step-08-chat"></a>
+
+## 7. Чат: POST /chat
+
+Естественный язык → тот же `ExpressionService`, что и `GET /expression`. Ответ: текст ассистента + вложенный `expression` с plot и mapping stats.
+
+<a id="chat-modes"></a>
+
+### Stub и LLM режимы
+
+| Режим | Когда | LLM | Tool (GEO) |
+|-------|--------|-----|------------|
+| **Stub** (по умолчанию) | нет `OPENAI_API_KEY` или `GEO_STUB_LLM=true` | нет — шаблонный текст | **да** — реальный `ExpressionService` |
+| **LLM** | задан `OPENAI_API_KEY` и `GEO_STUB_LLM` не true | OpenAI через pydantic-ai (`GEO_OPENAI_MODEL`, default `gpt-4o-mini`) | **да** — tool `get_gene_expression` |
+
+Stub достаточен для оценки: tool вызывается, plot возвращается, в логах есть `ExpressionTool invoked`.
+
+<a id="chat-body"></a>
+
+### Тело запроса
+
+| Поле | Тип | Обязательный | Пример |
+|------|-----|--------------|--------|
+| `message` | `string` | да | `"Show me TP53 and BRCA1 expression in GSE2034"` |
+
+В сообщении должны быть:
+- accession серии: `GSE` + цифры (регистр не важен);
+- **2–5** символов генов (парсер извлекает токены вроде `TP53`, `BRCA1`).
+
+<a id="chat-examples"></a>
+
+### Примеры запросов
+
+**Happy path — curl (WSL):**
+
+```bash
+curl -s --max-time 300 -X POST http://127.0.0.1:8000/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Show me TP53 and BRCA1 expression in GSE2034"}'
+```
+
+**Три гена:**
+
+```bash
+curl -s --max-time 300 -X POST http://127.0.0.1:8000/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Plot TP53, BRCA1, EGFR in GSE2034"}'
+```
+
+**Повторный запрос — проверка кэша** (второй раз `expression.cached` должен стать `true`):
+
+```bash
+curl -s --max-time 300 -X POST http://127.0.0.1:8000/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "TP53 and BRCA1 in GSE2034"}'
+```
+
+**PowerShell:**
+
+```powershell
+$body = '{"message": "Show me TP53 and BRCA1 expression in GSE2034"}'
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/chat" -Method POST `
+  -ContentType "application/json" -Body $body -TimeoutSec 300 |
+  Select-Object tool_invoked, message, @{n='cached';e={$_.expression.cached}}, @{n='duration_ms';e={$_.expression.duration_ms}}
+```
+
+<a id="chat-response"></a>
+
+### Пример успешного ответа (сокращённо)
+
+```json
+{
+  "message": "Here is expression for TP53, BRCA1 in GSE2034 (platform GPL96)...",
+  "expression": {
+    "gse_id": "GSE2034",
+    "genes": ["TP53", "BRCA1"],
+    "plot": {
+      "format": "png_base64",
+      "content": "iVBORw0KGgoAAAANSUhEUgAA..."
+    },
+    "mapping": {
+      "gpl_id": "GPL96",
+      "per_gene": [
+        {"gene_symbol": "TP53", "probes_mapped": 2, "aggregation": "mean_log2", "skip_reason": null}
+      ],
+      "unmapped_probe_count": 1234
+    },
+    "cached": false,
+    "duration_ms": 45230.5
+  },
+  "tool_invoked": true
+}
+```
+
+| Поле | Смысл |
+|------|-------|
+| `message` | Текст ассистента (шаблон в stub или ответ LLM) |
+| `expression` | Тот же DTO, что у `GET /expression`; `null`, если tool не вызывался |
+| `tool_invoked` | `true` — ExpressionTool реально вызван (критично для acceptance) |
+| `expression.plot.content` | PNG base64 → [декодировать в картинку](https://base64.guru/converter/decode/image) |
+
+### Ожидаемые логи (happy path)
+
+```
+INFO geo_expression_service.services.chat_agent ExpressionTool invoked: gse_id=GSE2034 genes=['TP53', 'BRCA1'] request_id=...
+INFO geo_expression_service.services.expression_service Expression finished: cached=false duration_ms=... gse_id=GSE2034 genes=2 request_id=...
+INFO geo_expression_service.api.routes.chat Chat route finished: tool_invoked=True gse_id=GSE2034 genes=2 cached=False ...
+```
+
+<a id="chat-clarification"></a>
+
+### Clarification (без tool)
+
+Если GSE или гены не распознаны — HTTP **200**, `tool_invoked: false`, `expression: null`, текст с подсказкой.
+
+```bash
+curl -s -X POST http://127.0.0.1:8000/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Hello, what can you do?"}'
+```
+
+```bash
+curl -s -X POST http://127.0.0.1:8000/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Show TP53 in GSE2034"}'
+```
+
+Второй пример — только один ген (нужно 2–5).
+
+---
+
 <a id="step-05-swagger"></a>
 
-## 7. Swagger UI
+## 8. Swagger UI
 
 | URL | Описание |
 |-----|----------|
@@ -522,11 +676,25 @@ print(f"Готово: {data['gse_id']}, duration_ms={data['duration_ms']}")
 4. Параметры: `gse=GSE2034`, `genes=TP53,BRCA1`.
 5. **Execute** — подождите до 2 минут; в терминале сервера должны появиться логи `GEO download finished`.
 
+### Запрос через чат (Swagger)
+
+1. `POST /chat` → **Try it out**.
+2. Request body:
+
+```json
+{
+  "message": "Show me TP53 and BRCA1 expression in GSE2034"
+}
+```
+
+3. **Execute** — проверьте `tool_invoked: true` и наличие `expression.plot.content`.
+4. Base64 из ответа можно вставить на [Base64 Guru — Decode image](https://base64.guru/converter/decode/image).
+
 ---
 
 <a id="step-08-errors"></a>
 
-## 8. Примеры ошибок
+## 9. Примеры ошибок
 
 **Неверный GSE** → HTTP 422, `"error": "invalid_gse_format"`.
 
@@ -536,33 +704,48 @@ print(f"Готово: {data['gse_id']}, duration_ms={data['duration_ms']}")
 
 **Ошибка разбора аннотации** → HTTP 502, `"error": "mapping_error"`.
 
+**Чат: нераспознанное сообщение** → HTTP **200**, `tool_invoked: false`, `expression: null` (не ошибка — clarification).
+
+**Чат: невалидные гены в tool** (например 1 ген через LLM) → HTTP 422, как у `/expression`.
+
 ---
 
 <a id="step-09-env"></a>
 
-## 9. Переменные окружения
+## 10. Переменные окружения
 
 Файл `.env` создаётся в **корне репозитория** (рядом с `pyproject.toml`).
 
 | Переменная | По умолчанию | Описание |
 |------------|--------------|----------|
 | `GEO_HTTP_TIMEOUT_S` | `120` | Таймаут HTTP к NCBI (секунды) |
-| `GEO_CACHE_DIR` | `.cache/geo_expression` | Каталог кэша (BL-03) |
+| `GEO_CACHE_DIR` | `.cache/geo_expression` | Каталог двухуровневого кэша |
 | `GEO_CACHE_MAX_ENTRIES` | `256` | Лимит записей кэша |
 | `GEO_CACHE_MAX_BYTES` | `536870912` | Лимит размера кэша (512 MB) |
 | `GEO_CONCURRENCY_LIMIT` | `4` | Параллельные загрузки (BL-04) |
+| `GEO_STUB_LLM` | `false` | `true` — stub-режим чата без OpenAI |
+| `OPENAI_API_KEY` | — | Ключ OpenAI; без него — stub |
+| `GEO_OPENAI_MODEL` | `gpt-4o-mini` | Модель для LLM-режима чата |
 
-Пример `.env` для медленной сети:
+Пример `.env` для медленной сети и stub-чата:
 
 ```env
 GEO_HTTP_TIMEOUT_S=180
+GEO_STUB_LLM=true
+```
+
+Пример `.env` с LLM (платный OpenAI API):
+
+```env
+OPENAI_API_KEY=sk-...
+GEO_OPENAI_MODEL=gpt-4o-mini
 ```
 
 ---
 
 <a id="step-10-tests"></a>
 
-## 10. Тесты
+## 11. Тесты
 
 Из корня репозитория:
 
@@ -577,7 +760,7 @@ pip install -e ".[dev]"
 pytest -v
 ```
 
-Покрытие BL-02 (без live-запросов к NCBI):
+Покрытие (без live-запросов к NCBI):
 
 | Файл | Что проверяет |
 |------|----------------|
@@ -586,13 +769,15 @@ pytest -v
 | `tests/test_plot_builder.py` | PNG base64 |
 | `tests/test_expression_route.py` | HTTP 422 до GEO fetch |
 | `tests/test_expression_service.py` | orchestration с mock GeoClient |
+| `tests/test_cache_store.py` | LRU, disk tier, negative cache |
+| `tests/test_chat_route.py` | парсер чата, stub happy path, clarification |
 | `tests/test_health_route.py` | `GET /health` |
 
 ---
 
 <a id="step-11-troubleshooting"></a>
 
-## 11. Типичные проблемы
+## 12. Типичные проблемы
 
 | Симптом | Решение |
 |---------|---------|
@@ -601,7 +786,7 @@ pytest -v
 | `ModuleNotFoundError: geo_expression_service` | `cd ncbi-viewer`, затем `pip install -e .` (не из `geo_expression_service/`) |
 | `.venv` создан в `geo_expression_service/` | Удалите его, пересоздайте в корне — см. [пересоздание .venv](#step-02-venv-recreate) |
 | Порт 8000 занят | Другой порт: `--port 8001` или завершите старый uvicorn (см. ниже) |
-| curl обрывается на `/expression` | Добавьте `--max-time 300` |
+| curl обрывается на `/expression` или `/chat` | Добавьте `--max-time 300` |
 | Долгий ответ 30–120 с | Нормально — идёт загрузка с NCBI |
 | `502 geo_download_error` | Интернет, доступность NCBI, увеличьте `GEO_HTTP_TIMEOUT_S` |
 | PowerShell: `curl` зависает | `Invoke-RestMethod -TimeoutSec 300` |
@@ -627,7 +812,7 @@ pkill -f "uvicorn geo_expression_service.main:app"
 
 <a id="step-12-structure"></a>
 
-## 12. Структура репозитория
+## 13. Структура репозитория
 
 ```
 ncbi-viewer/                 ← корень git-репозитория (venv, pip install, uvicorn)
@@ -639,8 +824,9 @@ ncbi-viewer/                 ← корень git-репозитория (venv, 
 │   └── run_book.md          ← этот файл
 ├── geo_expression_service/  ← Python-пакет (код приложения)
 │   ├── main.py
+│   ├── services/chat_agent.py   ← POST /chat, ExpressionTool
 │   └── adapters/geo_client.py   ← запросы к NCBI
-├── tests/                   ← unit/API тесты (BL-02)
+├── tests/                   ← unit/API тесты
 ├── 01-Context/
 ├── 03-Solution/
 └── 04-UI/
@@ -650,7 +836,7 @@ ncbi-viewer/                 ← корень git-репозитория (venv, 
 
 <a id="step-13-checklist"></a>
 
-## 13. Чеклист
+## 14. Чеклист
 
 - [ ] `python3 --version` (или `python --version`) → 3.11+
 - [ ] `cd ncbi-viewer` (корень репозитория)
@@ -658,7 +844,10 @@ ncbi-viewer/                 ← корень git-репозитория (venv, 
 - [ ] `python -m uvicorn geo_expression_service.main:app --host 127.0.0.1 --port 8000` стартует
 - [ ] `curl -s http://127.0.0.1:8000/health` → `"status":"ok"`
 - [ ] `curl -s --max-time 300 ".../expression?gse=GSE2034&genes=TP53,BRCA1"` → JSON с `plot.content`
+- [ ] `curl -s --max-time 300 -X POST .../chat -d '{"message":"..."}'` → `tool_invoked: true` и `expression.plot.content`
+- [ ] Повторный `/chat` с тем же GSE/генами → `expression.cached: true`
 - [ ] В логах сервера есть `GEO download finished` (matrix + platform)
+- [ ] PNG из base64 открывается (скрипт выше или [Base64 Guru](https://base64.guru/converter/decode/image))
 
 ---
 
@@ -668,5 +857,6 @@ ncbi-viewer/                 ← корень git-репозитория (venv, 
 
 - NCBI GEO: https://www.ncbi.nlm.nih.gov/geo/
 - GSE2034 (тестовая серия): https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE2034
+- Base64 → PNG (онлайн): https://base64.guru/converter/decode/image
 - Архитектура: `03-Solution/03-architecture.md`
 - Backlog: `03-Solution/04-backlog.md`

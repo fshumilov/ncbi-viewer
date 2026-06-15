@@ -24,7 +24,7 @@ Implement items in **Order** (summary table). Within a slice group, complete tas
 | 1 | F-01 | BL-01 | done | Project scaffold, config, logging, validation, health route | — |
 | 2 | F-02 | BL-02 | done | Cold-path expression: GeoClient, mapper, plotter, `GET /expression` | BL-01 |
 | 3 | F-03 | BL-03 | done | Two-tier CacheStore + expression cache seam (`cached`, `duration_ms`) | BL-02 |
-| 4 | F-04 | BL-05 | not started | ChatAgent, ExpressionTool, `POST /chat` (stub LLM OK) | BL-02, BL-03 |
+| 4 | F-04 | BL-05 | done | ChatAgent, ExpressionTool, `POST /chat` (stub LLM OK) | BL-02, BL-03 |
 | 5 | F-05 | BL-04 | not started | GeoClient retries, timeouts, bounded concurrency, HTTP error mapping | BL-02, BL-05 |
 | 6 | F-06 | BL-06 | not started | README runbook, `.env.example`, acceptance cross-links | BL-03, BL-04, BL-05 |
 
@@ -111,12 +111,12 @@ Implement items in **Order** (summary table). Within a slice group, complete tas
 - **Slice:** F-04
 - **Screens / routes:** `route.chat` (`POST /chat`)
 - **Tasks:**
-  - [ ] Extend `domain/models.py`: `ChatRequest`, `ChatResponse` (`message`, `expression`, `tool_invoked`)
-  - [ ] Implement `services/chat_agent.py`: pydantic-ai agent with **ExpressionTool** calling `ExpressionService.get_expression(...)` — same method as `GET /expression`
-  - [ ] Implement stub LLM path when `OPENAI_API_KEY` absent or `GEO_STUB_LLM=true`; tool path remains real
-  - [ ] Implement `api/routes/chat.py`: JSON body `{ "message": "..." }`; delegate to ChatAgent only
-  - [ ] Pass through `cached`, `duration_ms`, and mapping stats from tool result into `ChatResponse`
-  - [ ] Log tool invocation with parsed GSE/genes and `request_id`
+  - [x] Extend `domain/models.py`: `ChatRequest`, `ChatResponse` (`message`, `expression`, `tool_invoked`)
+  - [x] Implement `services/chat_agent.py`: pydantic-ai agent with **ExpressionTool** calling `ExpressionService.get_expression(...)` — same method as `GET /expression`
+  - [x] Implement stub LLM path when `OPENAI_API_KEY` absent or `GEO_STUB_LLM=true`; tool path remains real
+  - [x] Implement `api/routes/chat.py`: JSON body `{ "message": "..." }`; delegate to ChatAgent only
+  - [x] Pass through `cached`, `duration_ms`, and mapping stats from tool result into `ChatResponse`
+  - [x] Log tool invocation with parsed GSE/genes and `request_id`
 - **Done when:**
   - `POST /chat` with message like *"Show me TP53 and BRCA1 expression in GSE2034"* returns HTTP 200 with assistant text + plot artifact (solution draft — chat happy path)
   - Server logs prove ExpressionTool invoked with parsed GSE and genes — not LLM-only completion (`tool_invoked: true` on happy path)
